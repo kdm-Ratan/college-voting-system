@@ -82,11 +82,35 @@ export default function VotePage() {
   const [voterPin, setVoterPin] = useState("");
   const [eligible, setEligible] = useState(false);
   const [selection, setSelection] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<"candidate" | "skip" | null>(null);
   const [error, setError] = useState("");
   const [loadStatus, setLoadStatus] = useState<LoadStatus>("loading");
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const operationInProgress = useRef(false);
+  const reviewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const ballotHeadingRef = useRef<HTMLHeadingElement>(null);
+  const outcomeHeadingRef = useRef<HTMLHeadingElement>(null);
+  const voterNumberInputRef = useRef<HTMLInputElement>(null);
+  const nextVoterFocusRef = useRef(false);
+  const selectedCandidate = ballot?.candidates.find((candidate) => candidate.id === selection) ?? null;
+
+  useEffect(() => {
+    if (reviewing) {
+      reviewHeadingRef.current?.focus();
+    } else if (eligible) {
+      ballotHeadingRef.current?.focus();
+    }
+  }, [eligible, reviewing]);
+
+  useEffect(() => {
+    if (outcome) {
+      outcomeHeadingRef.current?.focus();
+    } else if (nextVoterFocusRef.current) {
+      nextVoterFocusRef.current = false;
+      voterNumberInputRef.current?.focus();
+    }
+  }, [outcome]);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,6 +224,7 @@ export default function VotePage() {
       if (submitError || data !== expectedOutcome) {
         setEligible(false);
         setSelection(null);
+        setReviewing(null);
         setError("We couldn't confirm that your ballot was recorded. Please contact an election official before trying again.");
         return;
       }
@@ -208,6 +233,7 @@ export default function VotePage() {
     } catch {
       setEligible(false);
       setSelection(null);
+      setReviewing(null);
       setError("We couldn't confirm that your ballot was recorded. Please contact an election official before trying again.");
     } finally {
       operationInProgress.current = false;
@@ -216,10 +242,12 @@ export default function VotePage() {
   }
 
   function prepareNextVoter() {
+    nextVoterFocusRef.current = true;
     setVoterNumber("");
     setVoterPin("");
     setEligible(false);
     setSelection(null);
+    setReviewing(null);
     setError("");
     setOutcome(null);
   }
@@ -258,7 +286,7 @@ export default function VotePage() {
         {outcome ? (
           <section className="rounded-2xl border border-emerald-200 bg-white p-8 text-center shadow-sm sm:p-10" role="status">
             <div aria-hidden="true" className="mx-auto grid size-14 place-items-center rounded-full bg-emerald-100 text-2xl text-emerald-700">✓</div>
-            <h2 className="mt-5 text-2xl font-bold">
+            <h2 ref={outcomeHeadingRef} tabIndex={-1} className="mt-5 text-2xl font-bold focus:outline-none">
               {outcome === "voted" ? "Your vote has been recorded." : "Your ballot was skipped."}
             </h2>
             <p className="mx-auto mt-3 max-w-md text-slate-600">
@@ -297,6 +325,7 @@ export default function VotePage() {
                   Voter number
                 </label>
                 <input
+                  ref={voterNumberInputRef}
                   id="voter-number"
                   value={voterNumber}
                   onChange={(event) => {
@@ -338,11 +367,56 @@ export default function VotePage() {
                   {submitting ? "Checking…" : "Continue to ballot"}
                 </button>
               </form>
+            ) : reviewing ? (
+              <section aria-labelledby="review-heading" className="mx-auto max-w-lg">
+                <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Final review</p>
+                <h2 ref={reviewHeadingRef} id="review-heading" tabIndex={-1} className="mt-2 text-2xl font-bold focus:outline-none">
+                  {reviewing === "candidate" ? "Confirm your selection" : "Confirm that you want to skip"}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {reviewing === "candidate"
+                    ? "Review the option below. Your vote is final once submitted."
+                    : "Skipping will mark this ballot as skipped. No vote will be recorded."}
+                </p>
+                {reviewing === "candidate" && (
+                  <div className="mt-5 flex items-center gap-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                    {selectedCandidate ? (
+                      <>
+                        <span aria-hidden="true" className="size-8 shrink-0 rounded-full border-2 border-white shadow ring-1 ring-slate-200" style={{ backgroundColor: selectedCandidate.color }} />
+                        <span className="min-w-0">
+                          <span className="block font-bold text-slate-900">{selectedCandidate.name}</span>
+                          <span className="block text-sm text-slate-600">Symbol: {selectedCandidate.symbol_key}</span>
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-bold text-slate-900">NOTA <span className="font-normal text-slate-600">(None of the Above)</span></span>
+                    )}
+                  </div>
+                )}
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void submitVote(reviewing === "skip")}
+                    disabled={submitting}
+                    className={`min-h-12 flex-1 rounded-xl px-5 py-3 font-semibold text-white transition disabled:cursor-wait disabled:opacity-60 ${reviewing === "skip" ? "bg-rose-700 hover:bg-rose-800" : "bg-indigo-600 hover:bg-indigo-700"}`}
+                  >
+                    {submitting ? "Submitting…" : reviewing === "skip" ? "Confirm skip" : "Confirm and cast vote"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewing(null)}
+                    disabled={submitting}
+                    className="min-h-12 rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    Back to ballot
+                  </button>
+                </div>
+              </section>
             ) : (
               <div>
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
                   <div>
-                    <h2 className="text-xl font-bold">Choose one option</h2>
+                    <h2 ref={ballotHeadingRef} tabIndex={-1} className="text-xl font-bold focus:outline-none">Choose one option</h2>
                     <p className="mt-1 text-sm text-slate-600">Your choice cannot be changed after submission.</p>
                   </div>
                   <button
@@ -381,6 +455,7 @@ export default function VotePage() {
                           checked={selection === candidate.id}
                           onChange={() => {
                             setSelection(candidate.id);
+                            setReviewing(null);
                             setError("");
                           }}
                         />
@@ -414,6 +489,7 @@ export default function VotePage() {
                         checked={selection === "nota"}
                         onChange={() => {
                           setSelection("nota");
+                          setReviewing(null);
                           setError("");
                         }}
                       />
@@ -426,17 +502,17 @@ export default function VotePage() {
                 <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row">
                   <button
                     type="button"
-                    onClick={() => void submitVote(false)}
+                    onClick={() => setReviewing("candidate")}
                     disabled={submitting || !selection}
-                    className="flex-1 rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="min-h-12 flex-1 rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {submitting ? "Submitting…" : "Submit vote"}
+                    Review selection
                   </button>
                   <button
                     type="button"
-                    onClick={() => void submitVote(true)}
+                    onClick={() => setReviewing("skip")}
                     disabled={submitting}
-                    className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                    className="min-h-12 rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
                   >
                     Skip
                   </button>

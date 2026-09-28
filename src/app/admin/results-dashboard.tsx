@@ -163,7 +163,7 @@ export default function ResultsDashboard({ elections }: { elections: ClosedElect
   }, [activeElectionId, refreshCount]);
 
   return (
-    <section aria-labelledby="results-heading" className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm sm:p-8">
+    <section id="results-section" aria-labelledby="results-heading" className="mb-6 w-full min-w-0 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 text-slate-900 shadow-sm sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.14em] text-indigo-600">Election results</p>
@@ -219,7 +219,7 @@ export default function ResultsDashboard({ elections }: { elections: ClosedElect
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">Closed</span>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
             <Metric label="Registered voters" value={results.registered_voters.toLocaleString()} />
             <Metric label="Votes cast" value={results.votes_cast.toLocaleString()} />
             <Metric label="Turnout" value={formatPercentage(results.turnout_percentage)} />
@@ -236,7 +236,7 @@ export default function ResultsDashboard({ elections }: { elections: ClosedElect
                 No votes were recorded for this election.
               </div>
             ) : (
-              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+              <div className="mt-4 max-w-full overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full min-w-[520px] text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>

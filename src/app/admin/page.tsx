@@ -40,7 +40,21 @@ export default async function AdminPage() {
   if (votersError) throw new Error(`Could not load voters: ${votersError.message}`);
 
   return <>
-    <div className="mx-auto max-w-6xl px-5 pt-8 sm:px-8">
+    <nav aria-label="Election workspace sections" className="sticky top-0 z-20 border-b border-slate-200 bg-[#f4f7fb]">
+      <div className="mx-auto flex w-full min-w-0 max-w-6xl gap-1 overflow-x-auto px-5 py-2 sm:px-8">
+        {[
+          ["election-section", "Overview"],
+          ["candidates-section", "Candidates"],
+          ["voters-section", "Voters"],
+          ["results-section", "Results"],
+        ].map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="min-h-10 shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-indigo-700">
+            {label}
+          </a>
+        ))}
+      </div>
+    </nav>
+    <div className="mx-auto w-full min-w-0 max-w-6xl px-5 pt-8 sm:px-8">
       <ResultsDashboard elections={closedElections} />
     </div>
     <ElectionManagement election={election} candidates={candidates ?? []} voters={voters ?? []} />
